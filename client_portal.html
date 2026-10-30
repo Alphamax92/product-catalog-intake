@@ -316,7 +316,6 @@
     }
 
     const SIZE_PRESETS = ['Standard', 'S, M, L, XL', 'Single', 'Double', 'Queen', 'King', 'Custom'];
-    const VENDOR_PRESETS = ['box + cask', 'DIME Design', 'Herman Miller', 'West Elm', 'General'];
 
     // State
     let categories = ['Bookshelves', 'Chairs'];
@@ -340,14 +339,6 @@
       let out = '';
       SIZE_PRESETS.forEach(s => {
         out += '<option value="' + escapeHtml(s) + '">';
-      });
-      return out;
-    }
-
-    function renderVendorDatalist() {
-      let out = '';
-      VENDOR_PRESETS.forEach(v => {
-        out += '<option value="' + escapeHtml(v) + '">';
       });
       return out;
     }
@@ -378,7 +369,7 @@
       addProductRow({
         name: '',
         type: categories[0] || 'General',
-        vendor: '',
+        description: '',
         in_stock: true,
         unit_cost_usd: 0,
         unit_cost_ngn: 0,
@@ -517,9 +508,9 @@
               '<i class="ph-bold ph-images text-slate-400"></i> Images (Photos)' +
             '</div>' +
           '</th>' +
-          '<th class="w-40 px-4 py-3 border-r border-slate-200/80">' +
+          '<th class="w-64 px-4 py-3 border-r border-slate-200/80">' +
             '<div class="flex items-center gap-1.5 text-slate-700">' +
-              '<i class="ph-bold ph-buildings text-slate-400"></i> Vendor' +
+              '<i class="ph-bold ph-text-align-left text-slate-400"></i> Description' +
             '</div>' +
           '</th>' +
           '<th class="w-24 px-3 py-3 border-r border-slate-200/80 text-center">' +
@@ -622,8 +613,7 @@
           '</select></div></td>' +
           '<td class="px-3 py-2 border-r border-slate-200/70 text-center"><div class="flex items-center justify-center">' + imgHtml + '</div></td>' +
           '<td class="px-3 py-2 border-r border-slate-200/70">' +
-          '<input type="text" list="vendorDatalist" class="table-input text-xs font-bold bg-[#EEF2F6] text-[#334155]" value="' + escapeHtml(p.vendor || '') + '" placeholder="Vendor / Brand..." onchange="updateProductField(\'' + p.id + '\', \'vendor\', this.value)">' +
-          '<datalist id="vendorDatalist">' + renderVendorDatalist() + '</datalist>' +
+          '<input type="text" class="table-input text-xs text-slate-700 font-normal" value="' + escapeHtml(p.description || '') + '" placeholder="Product description..." onchange="updateProductField(\'' + p.id + '\', \'description\', this.value)">' +
           '</td>' +
           '<td class="px-3 py-2 border-r border-slate-200/70 text-center">' +
           '<button onclick="toggleProductStock(\'' + p.id + '\')" class="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base spring-bounce ' + (p.in_stock ? 'bg-amber-50 text-amber-500 border border-amber-200/60' : 'text-slate-300 bg-slate-50 border border-slate-200/50') + '" title="' + (p.in_stock ? 'In Stock (Click to toggle)' : 'Out of Stock') + '">' + (p.in_stock ? '👍' : '—') + '</button></td>' +
@@ -647,7 +637,7 @@
         id: generateId(),
         name: data.name || '',
         type: data.type || categories[0] || 'General',
-        vendor: data.vendor || 'box + cask',
+        description: data.description || '',
         in_stock: data.in_stock !== undefined ? data.in_stock : true,
         unit_cost_usd: data.unit_cost_usd !== undefined ? data.unit_cost_usd : (data.unit_cost || 0.0),
         unit_cost_ngn: data.unit_cost_ngn !== undefined ? data.unit_cost_ngn : 0.0,
@@ -853,14 +843,13 @@
       const client = document.getElementById('clientName').value || 'Client';
       const rootFolder = zip.folder(client + '_Product_Catalog');
       const categoryFolder = rootFolder.folder("Products_By_Category");
-      const vendorFolder = rootFolder.folder("Products_By_Vendor");
 
-      // WooCommerce Standard Import CSV (NO total sum, Dual Currency columns)
+      // WooCommerce Standard Import CSV (NO total sum, Dual Currency columns, Description field)
       let csvContent = "Type,SKU,Name,Published,Is featured?,Visibility in catalog,Short description,Description,In stock?,Regular price,Regular price (USD),Regular price (NGN),Categories,Tags,Images,Attribute 1 name,Attribute 1 value(s),Attribute 1 visible,Attribute 1 global\n";
 
       products.forEach((p, idx) => {
         const cleanName = (p.name || ('Product_' + (idx+1))).replace(/[\\/*?:"<>|]/g, '_');
-        const cleanVendor = (p.vendor || 'General').replace(/[\\/*?:"<>|]/g, '_');
+        const cleanDesc = (p.description || '').replace(/"/g, '""');
         const cleanType = (p.type || 'Uncategorized').replace(/[\\/*?:"<>|]/g, '_');
         const costUsd = p.unit_cost_usd !== undefined ? p.unit_cost_usd : (p.unit_cost || 0);
         const costNgn = p.unit_cost_ngn || 0;
@@ -878,12 +867,11 @@
             const b64Data = imgB64.split('base64,')[1];
             const filename = (imgIdx === 0) ? ('01_featured_' + cleanName + '.jpg') : ((imgIdx+1) + '_gallery_' + cleanName + '.jpg');
             imgNames.push(filename);
-            categoryFolder.file(cleanType + '/' + cleanName + ' (' + cleanVendor + ')/' + filename, b64Data, { base64: true });
-            vendorFolder.file(cleanVendor + '/' + cleanType + '/' + cleanName + '/' + filename, b64Data, { base64: true });
+            categoryFolder.file(cleanType + '/' + cleanName + '/' + filename, b64Data, { base64: true });
           }
         });
 
-        csvContent += '"simple","WC-' + String(idx+1).padStart(4, '0') + '","' + cleanName + '",1,0,"visible","' + cleanType + '","' + (dims ? ('Size: ' + dims) : '') + '",' + inStock + ',' + mainCost + ',' + costUsd + ',' + costNgn + ',"' + cleanType + '","' + cleanVendor + '","' + imgNames.join(', ') + '","Size","' + attrVal + '",1,1\n';
+        csvContent += '"simple","WC-' + String(idx+1).padStart(4, '0') + '","' + cleanName + '",1,0,"visible","' + (dims ? ('Size: ' + dims) : '') + '","' + cleanDesc + '",' + inStock + ',' + mainCost + ',' + costUsd + ',' + costNgn + ',"' + cleanType + '","","' + imgNames.join(', ') + '","Size","' + attrVal + '",1,1\n';
       });
 
       rootFolder.file("woocommerce_import.csv", csvContent);

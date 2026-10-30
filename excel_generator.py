@@ -42,10 +42,10 @@ def generate_catalog_excel(products, output_path, client_name="Client Catalog"):
         bottom=Side(style='thin', color=BORDER_COLOR)
     )
     
-    # Headers with both Dollar ($) and Naira (₦), Sizes, Size (WxLxH)
-    # NO description, NO total sum formula
+    # Headers with both Dollar ($) and Naira (₦), Sizes, Size (WxLxH), Description
+    # NO total sum formula
     headers = [
-        "", "Name", "Type", "Images", "Vendor", "In stock",
+        "", "Name", "Type", "Images", "Description", "In stock",
         "Unit cost ($)", "Unit cost (₦)", "Sizes", "Size (WxLxH)"
     ]
     ws.append(headers)
@@ -65,7 +65,7 @@ def generate_catalog_excel(products, output_path, client_name="Client Catalog"):
     ws.column_dimensions["B"].width = 28     # Name
     ws.column_dimensions["C"].width = 18     # Type
     ws.column_dimensions["D"].width = 22     # Images
-    ws.column_dimensions["E"].width = 18     # Vendor
+    ws.column_dimensions["E"].width = 30     # Description
     ws.column_dimensions["F"].width = 12     # In stock
     ws.column_dimensions["G"].width = 16     # Unit cost ($)
     ws.column_dimensions["H"].width = 18     # Unit cost (₦)
@@ -130,11 +130,10 @@ def generate_catalog_excel(products, output_path, client_name="Client Catalog"):
         elif total_photos_count > 0:
             cell_d.value = f"[{total_photos_count} Images]"
         
-        # Col E: Vendor
-        cell_e = ws.cell(row=row, column=5, value=prod.get("vendor", ""))
-        cell_e.font = Font(name="Segoe UI", size=9, bold=True, color=VENDOR_FONT)
-        cell_e.fill = PatternFill(start_color=VENDOR_FILL, end_color=VENDOR_FILL, fill_type="solid")
-        cell_e.alignment = Alignment(horizontal="center", vertical="center")
+        # Col E: Description
+        cell_e = ws.cell(row=row, column=5, value=prod.get("description", ""))
+        cell_e.font = Font(name="Segoe UI", size=9, color="334155")
+        cell_e.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         cell_e.border = thin_border
         
         # Col F: In stock

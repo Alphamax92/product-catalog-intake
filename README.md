@@ -9,7 +9,7 @@ A single-session product catalog intake application designed for **WordPress & W
 ### 1. WordPress eCommerce & WooCommerce Integration
 * Automatically generates a standardized **`woocommerce_import.csv`** formatted specifically for WordPress WooCommerce (`WooCommerce > Products > Import`).
 * Mapped fields:
-  * `Name`, `Categories`, `Regular price`, `Regular price (USD)`, `Regular price (NGN)`, `In stock?`, `Tags` (Vendor/Brand)
+  * `Name`, `Categories`, `Description`, `Regular price`, `Regular price (USD)`, `Regular price (NGN)`, `In stock?`
   * `Attribute 1 name`: **Size**, `Attribute 1 value(s)`: **Sizes & Dimensions**
   * `Images`: Main featured image + all additional gallery photos
 
@@ -33,14 +33,13 @@ A single-session product catalog intake application designed for **WordPress & W
 * Set which image is the **★ Main Featured** image, reorder, or delete extra shots.
 * Google Drive auto-sorts all photos into:
   * `Products_By_Category / [Category] / [Product_Name] / 01_featured.jpg, 02_gallery_1.jpg...`
-  * `Products_By_Vendor / [Vendor] / [Category] / [Product_Name] / ...`
 
 ### 5. Dedicated Sizes Column + Physical Dimensions
 * Added a dedicated **`Sizes`** column for clothing/shoe sizes or variants (e.g., `S, M, L`, `Standard`, `Twin / Full / Queen`, `Custom`).
 * Retained the **`Size (WxLxH)`** column for physical dimensions (e.g., `12x7x8`, `H 31.75" W 18"`).
 
-### 6. Clean Form Design (No Description Tab & No Total Sum)
-* **No Description Tab**: Kept the form lightweight and focused on essential eCommerce intake fields.
+### 6. Clean Form Design (Dedicated Description Field & No Total Sum)
+* **Dedicated Description Field**: Replaced the vendor field with a dedicated product description input, ensuring clients can describe each product directly in the table and cards.
 * **No Total Sum**: Removed the total catalog sum from both the sticky footer and the Excel export. The footer displays active counts: `+ Add...` • `X records` • `Y in stock` • `Z photos`.
 
 ### 7. Dedicated Client-Facing Experience
@@ -56,11 +55,10 @@ When submitted, the system automatically creates:
 G:\My Drive\Product Catalog\[Client_Name]_[Store]_[Timestamp]/
 ├── Products_By_Category/
 │   ├── Bookshelves/
-│   │   └── Samari bookshelf (box + cask)/
+│   │   └── Samari bookshelf/
 │   │       ├── 01_featured_Samari_bookshelf.jpg
 │   │       └── 02_gallery_1_Samari_bookshelf.jpg
 │   └── Chairs/
-├── Products_By_Vendor/
 ├── [Client_Name]_Product_Catalog.xlsx      <- Formatted Excel with photo thumbnails & dual currency (no sum row)
 ├── [Client_Name]_woocommerce_import.csv   <- Ready for WordPress WooCommerce Import
 ├── catalog_manifest.json

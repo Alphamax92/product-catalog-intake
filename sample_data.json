@@ -3,7 +3,6 @@
     "id": "prod_1",
     "name": "Samari bookshelf",
     "type": "Bookshelves",
-    "vendor": "box + cask",
     "in_stock": true,
     "unit_cost": 3585.0,
     "size": "12x7x8",
@@ -13,13 +12,13 @@
     ],
     "sizes": "Standard",
     "unit_cost_usd": 3585.0,
-    "unit_cost_ngn": 5550000.0
+    "unit_cost_ngn": 5550000.0,
+    "description": "Modern multi-tier wall bookshelf crafted from solid oak with open display shelving."
   },
   {
     "id": "prod_2",
     "name": "Compel bookcase",
     "type": "Bookshelves",
-    "vendor": "box + cask",
     "in_stock": true,
     "unit_cost": 218.0,
     "size": "14x16 and 14x79.5",
@@ -29,13 +28,13 @@
     ],
     "sizes": "14x16, 14x79.5",
     "unit_cost_usd": 218.0,
-    "unit_cost_ngn": 340000.0
+    "unit_cost_ngn": 340000.0,
+    "description": "Minimalist floor-standing wooden display bookcase with deep storage tiers."
   },
   {
     "id": "prod_3",
     "name": "Madrid chair",
     "type": "Chairs",
-    "vendor": "DIME Design",
     "in_stock": true,
     "unit_cost": 5429.0,
     "size": "3x1x5",
@@ -45,13 +44,13 @@
     ],
     "sizes": "Standard",
     "unit_cost_usd": 5429.0,
-    "unit_cost_ngn": 8400000.0
+    "unit_cost_ngn": 8400000.0,
+    "description": "Iconic molded matte shell armchair with sculpted wooden Eiffel base."
   },
   {
     "id": "prod_4",
     "name": "Nebula chair",
     "type": "Chairs",
-    "vendor": "DIME Design",
     "in_stock": false,
     "unit_cost": 382.25,
     "size": "H 31.75\" W 18\" D 19.75\" Seat H 17.25\"",
@@ -61,13 +60,13 @@
     ],
     "sizes": "H 31.75\" W 18\"",
     "unit_cost_usd": 382.25,
-    "unit_cost_ngn": 590000.0
+    "unit_cost_ngn": 590000.0,
+    "description": "Curved mid-century modern accent lounge chair featuring ergonomic wooden frame."
   },
   {
     "id": "prod_5",
     "name": "Gedo bench",
     "type": "Chairs",
-    "vendor": "box + cask",
     "in_stock": true,
     "unit_cost": 1575.0,
     "size": "16.5x60x18",
@@ -77,6 +76,7 @@
     ],
     "sizes": "16.5x60x18",
     "unit_cost_usd": 1575.0,
-    "unit_cost_ngn": 2450000.0
+    "unit_cost_ngn": 2450000.0,
+    "description": "Industrial rustic slatted wood entryway and dining bench with heavy-duty metal legs."
   }
 ]

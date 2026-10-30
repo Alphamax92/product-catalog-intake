@@ -99,7 +99,8 @@ def save_catalog():
             processed_products.append({
                 "name": p.get("name", "Untitled Product"),
                 "type": p.get("type", "General"),
-                "vendor": p.get("vendor", "General"),
+                "description": p.get("description", ""),
+                "vendor": p.get("vendor", ""),
                 "in_stock": bool(p.get("in_stock", True)),
                 "unit_cost_usd": cost_usd,
                 "unit_cost_ngn": cost_ngn,

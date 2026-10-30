@@ -33,7 +33,7 @@ def generate_woocommerce_csv(products, csv_path):
     """
     fieldnames = [
         "Type", "SKU", "Name", "Published", "Is featured?", "Visibility in catalog",
-        "In stock?", "Regular price", "Regular price (USD)", "Regular price (NGN)",
+        "Description", "In stock?", "Regular price", "Regular price (USD)", "Regular price (NGN)",
         "Categories", "Tags", "Images",
         "Attribute 1 name", "Attribute 1 value(s)", "Attribute 1 visible", "Attribute 1 global"
     ]
@@ -45,6 +45,7 @@ def generate_woocommerce_csv(products, csv_path):
         for idx, prod in enumerate(products):
             p_name = prod.get("name", f"Product {idx+1}")
             p_type = prod.get("type", "General")
+            p_desc = prod.get("description", "")
             p_vendor = prod.get("vendor", "")
             p_stock = 1 if prod.get("in_stock", True) else 0
             
@@ -76,6 +77,7 @@ def generate_woocommerce_csv(products, csv_path):
                 "Published": 1,
                 "Is featured?": 0,
                 "Visibility in catalog": "visible",
+                "Description": p_desc,
                 "In stock?": p_stock,
                 "Regular price": primary_price if primary_price else "",
                 "Regular price (USD)": p_cost_usd if p_cost_usd else "",
@@ -115,6 +117,7 @@ def sort_and_save_catalog(catalog_data, target_drive_dir=None):
     for idx, prod in enumerate(catalog_data.get("products", [])):
         p_name = prod.get("name", f"Product_{idx+1}")
         p_type = prod.get("type", "Uncategorized")
+        p_desc = prod.get("description", "")
         p_vendor = prod.get("vendor", "General")
         p_stock = prod.get("in_stock", True)
         p_cost_usd = prod.get("unit_cost_usd", prod.get("unit_cost", 0.0))
@@ -127,7 +130,7 @@ def sort_and_save_catalog(catalog_data, target_drive_dir=None):
         clean_vendor = sanitize_filename(p_vendor)
         
         v_dest_dir = os.path.join(vendor_root, clean_vendor, clean_type, clean_name)
-        c_dest_dir = os.path.join(category_root, clean_type, f"{clean_name} ({clean_vendor})")
+        c_dest_dir = os.path.join(category_root, clean_type, clean_name)
         
         os.makedirs(v_dest_dir, exist_ok=True)
         os.makedirs(c_dest_dir, exist_ok=True)
@@ -163,6 +166,7 @@ def sort_and_save_catalog(catalog_data, target_drive_dir=None):
         excel_products.append({
             "name": p_name,
             "type": p_type,
+            "description": p_desc,
             "vendor": p_vendor,
             "in_stock": p_stock,
             "unit_cost_usd": p_cost_usd,
