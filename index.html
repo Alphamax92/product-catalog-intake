@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Catalog Intake & WooCommerce Drive Sorter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
+            'float': '0 12px 28px -6px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03)',
+            'pop': '0 24px 48px -12px rgba(15, 23, 42, 0.16), 0 12px 16px -8px rgba(15, 23, 42, 0.06)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Emil Kowalski Spring & Micro-interactions */
+    .spring-bounce {
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background-color 0.15s ease;
+    }
+    .spring-bounce:hover { transform: translateY(-1.5px) scale(1.008); }
+    .spring-bounce:active { transform: translateY(1px) scale(0.98); }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: #F8FAFC; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    .table-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #1E293B;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .table-input:hover { background: #F8FAFC; border-color: #E2E8F0; }
+    .table-input:focus {
+      background: #FFFFFF;
+      border-color: #2563EB;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+      outline: none;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 antialiased min-h-screen flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900 pb-24">
+
+  <!-- Top Glass Header -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-subtle px-6 py-3">
+    <div class="max-w-[1700px] mx-auto flex items-center justify-between gap-4 flex-wrap">
+      
+      <!-- Brand & Metadata -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm shrink-0">
+          <i class="ph-bold ph-shopping-bag-open text-xl text-blue-400"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <input id="catalogTitle" type="text" value="Online Store Catalog" 
+              class="font-extrabold text-slate-900 text-base sm:text-lg border border-transparent hover:border-slate-300 focus:border-blue-500 rounded px-1.5 py-0.5 focus:bg-white focus:outline-none transition-all w-56 sm:w-72"
+              title="Click to rename catalog title" oninput="saveDraft()">
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">WordPress & WooCommerce Ready</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <span>Client:</span>
+            <input id="clientName" type="text" value="Client Store" 
+              class="font-semibold text-slate-700 border-b border-dashed border-slate-300 hover:border-slate-400 focus:border-blue-500 px-1 py-0.2 focus:outline-none w-36"
+              placeholder="Client Name" oninput="saveDraft()">
+            <span class="text-slate-300">•</span>
+            <span id="driveStatusIndicator" class="flex items-center gap-1.5 text-emerald-600 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Google Drive Ready (G:\My Drive)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Currency Switcher & View Switcher -->
+      <div class="flex items-center gap-3 flex-wrap">
+        
+        <!-- Price Currency Switcher Tabs (Both / Naira / Dollars) -->
+        <div class="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold text-slate-600">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 select-none">Price:</span>
+          <button id="currTabBoth" onclick="setCurrencyMode('both')" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm font-bold transition-all">
+            Both (₦ & $)
+          </button>
+          <button id="currTabNGN" onclick="setCurrencyMode('ngn')" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all">
+            ₦ NGN
+          </button>
+          <button id="currTabUSD" onclick="setCurrencyMode('usd')" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all">
+            $ USD
+          </button>
+        </div>
+
+        <!-- View Switcher -->
+        <div class="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold text-slate-600">
+          <button id="viewTableBtn" onclick="switchView('table')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm font-bold transition-all">
+            <i class="ph-bold ph-table text-sm"></i>
+            Grid View
+          </button>
+          <button id="viewCardBtn" onclick="switchView('cards')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all">
+            <i class="ph-bold ph-cards text-sm"></i>
+            Card View
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <!-- Step 1 Categories -->
+        <button onclick="openCategoryModal()" class="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100/80 border border-purple-200/80 px-3.5 py-2 rounded-xl spring-bounce shadow-subtle">
+          <i class="ph-bold ph-folders text-base"></i>
+          Step 1: Set Categories (<span id="categoryCountBadge">2</span>)
+        </button>
+
+        <!-- Save & Sort in Drive -->
+        <button id="syncDriveBtn" onclick="saveToDrive()" class="flex items-center gap-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-xl shadow-sm spring-bounce">
+          <i class="ph-bold ph-google-drive-logo text-emerald-400 text-base"></i>
+          Save & Sort in Drive
+        </button>
+
+        <!-- Client Portal Link -->
+        <a href="/client" target="_blank" class="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-purple-700 bg-white hover:bg-purple-50 border border-slate-200 px-3 py-2 rounded-xl spring-bounce shadow-subtle" title="Open shareable Client View">
+          <i class="ph-bold ph-arrow-square-out text-sm"></i>
+          Client Portal
+        </a>
+
+        <!-- Dropdown Menu -->
+        <div class="relative inline-block text-left">
+          <button onclick="toggleExportMenu()" class="p-2 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl spring-bounce shadow-subtle">
+            <i class="ph-bold ph-dots-three-vertical text-base"></i>
+          </button>
+          <div id="exportMenu" class="hidden absolute right-0 mt-2 w-56 rounded-2xl bg-white shadow-pop border border-slate-200/80 py-1.5 z-50 text-xs">
+            <button onclick="downloadExcelDirect()" class="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 font-medium">
+              <i class="ph-bold ph-file-xls text-emerald-600 text-base"></i>
+              Export Excel (.xlsx with photos)
+            </button>
+            <button onclick="downloadWooCsvDirect()" class="w-full text-left px-4 py-2.5 hover:bg-purple-50 flex items-center gap-2.5 text-purple-700 font-semibold">
+              <i class="ph-bold ph-file-csv text-purple-600 text-base"></i>
+              Export WooCommerce CSV (WordPress)
+            </button>
+            <button onclick="downloadZipDirect()" class="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 font-medium">
+              <i class="ph-bold ph-archive text-blue-600 text-base"></i>
+              Download Full Package (.zip)
+            </button>
+            <div class="border-t border-slate-100 my-1"></div>
+            <button onclick="loadSampleData()" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-600">
+              <i class="ph-fill ph-sparkle text-amber-500"></i>
+              Reload Screenshot Sample (5 Products)
+            </button>
+            <button onclick="clearCatalogPrompt()" class="w-full text-left px-4 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600">
+              <i class="ph-bold ph-trash"></i>
+              Clear All Rows
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Filter & Sub-Toolbar -->
+  <section class="max-w-[1700px] mx-auto w-full px-6 pt-4 pb-2">
+    <div class="bg-white rounded-xl border border-slate-200/70 p-2 shadow-subtle flex flex-wrap items-center justify-between gap-3 text-xs">
+      
+      <!-- Left Filters -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="relative">
+          <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input id="searchInput" type="text" placeholder="Search products, sizes, vendors..." 
+            class="pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white focus:bg-white focus:border-blue-500 focus:outline-none w-52 transition-all"
+            oninput="handleSearch(this.value)">
+        </div>
+
+        <div class="h-4 w-px bg-slate-200"></div>
+
+        <!-- Filter by Category -->
+        <select id="typeFilter" onchange="filterByType(this.value)" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-700 hover:border-slate-300 focus:outline-none cursor-pointer">
+          <option value="ALL">All Categories</option>
+        </select>
+
+        <!-- In Stock filter -->
+        <button id="inStockFilterBtn" onclick="toggleInStockFilter()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-600 hover:bg-slate-50 transition-all">
+          <i class="ph-bold ph-check text-slate-400"></i>
+          <span>In Stock Only</span>
+        </button>
+
+        <div class="h-4 w-px bg-slate-200"></div>
+
+        <!-- Quick Add Category Button -->
+        <button onclick="openCategoryModal()" class="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-purple-600 px-2 py-1 rounded-md hover:bg-purple-50 transition-all">
+          <i class="ph-bold ph-plus-circle"></i>
+          + New Category
+        </button>
+      </div>
+
+      <!-- Right Quick Actions -->
+      <div class="flex items-center gap-2">
+        <button onclick="addProductRow()" class="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-lg spring-bounce shadow-subtle">
+          <i class="ph-bold ph-plus text-sm"></i>
+          + Add Product (Ctrl+N)
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Main Viewports -->
+  <main class="max-w-[1700px] mx-auto w-full px-6 flex-1 flex flex-col pt-1">
+
+    <!-- TABLE VIEW (Airtable / WooCommerce Exact Match) -->
+    <div id="tableView" class="bg-white rounded-2xl border border-slate-200 shadow-subtle overflow-hidden flex-1 flex flex-col">
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-left text-xs min-w-[1300px]">
+          <!-- Table Header (Rendered dynamically based on currency mode) -->
+          <thead id="tableHeader" class="bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-10 text-slate-500 font-semibold uppercase tracking-wider text-[11px] select-none">
+          </thead>
+          <!-- Table Body -->
+          <tbody id="productTableBody" class="divide-y divide-slate-100">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State (No mention of bulk upload) -->
+      <div id="tableEmptyState" class="hidden p-16 text-center flex flex-col items-center justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl mb-3">
+          <i class="ph-bold ph-storefront"></i>
+        </div>
+        <h3 class="text-sm font-bold text-slate-800">Your store catalog is empty</h3>
+        <p class="text-xs text-slate-500 max-w-sm mt-1">
+          First set your categories, then add products and attach photos.
+        </p>
+        <div class="mt-4 flex gap-2">
+          <button onclick="openCategoryModal()" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 shadow-sm spring-bounce">
+            Step 1: Set Categories
+          </button>
+          <button onclick="addProductRow()" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 shadow-sm spring-bounce">
+            + Add Product
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD VIEW -->
+    <div id="cardView" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4"></div>
+
+  </main>
+
+  <!-- Sticky Bottom Bar (NO TOTAL SUM) -->
+  <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-6 py-2.5 shadow-pop">
+    <div class="max-w-[1700px] mx-auto flex items-center justify-between gap-4 text-xs font-semibold text-slate-600">
+      <div class="flex items-center gap-4">
+        <button onclick="addProductRow()" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-lg text-slate-800 font-bold transition-all">
+          <i class="ph-bold ph-plus text-sm"></i>
+          Add...
+        </button>
+        <span id="recordCountBadge" class="text-slate-600 font-bold">0 records</span>
+        <span class="text-slate-300">•</span>
+        <span id="inStockSummary" class="text-emerald-600 font-semibold">0 in stock</span>
+        <span class="text-slate-300">•</span>
+        <span id="photosSummary" class="text-blue-600 font-semibold">0 photos</span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="saveToDrive()" class="flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg shadow-sm spring-bounce">
+          <i class="ph-bold ph-cloud-arrow-up text-sm"></i>
+          Save & Sort in Drive
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL 1: Client Store Categories Setup (Step 1) -->
+  <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-pop border border-slate-200 max-w-lg w-full p-6 spring-bounce">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <i class="ph-bold ph-folders text-xl"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Step 1: Define Your Store Categories</h3>
+            <p class="text-xs text-slate-500">What types of products are you selling?</p>
+          </div>
+        </div>
+        <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="ph-bold ph-x text-base"></i>
+        </button>
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1">Add a Category:</label>
+        <div class="flex gap-2">
+          <input id="newCategoryInput" type="text" placeholder="e.g. Bookshelves, Chairs, Dresses, Shoes..." 
+            class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-purple-600 focus:outline-none"
+            onkeydown="if(event.key === 'Enter') addCustomCategory()">
+          <button onclick="addCustomCategory()" class="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 spring-bounce">
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Template Presets -->
+      <div class="mt-3">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quick Industry Presets:</span>
+        <div class="flex gap-1.5 flex-wrap mt-1.5">
+          <button onclick="applyPreset(['Bookshelves', 'Chairs', 'Tables', 'Sofas', 'Lighting'])" class="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium">Furniture & Home</button>
+          <button onclick="applyPreset(['T-Shirts', 'Hoodies', 'Pants', 'Dresses', 'Jackets'])" class="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium">Fashion Apparel</button>
+          <button onclick="applyPreset(['Skincare', 'Makeup', 'Haircare', 'Fragrance'])" class="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium">Beauty & Care</button>
+        </div>
+      </div>
+
+      <!-- Current Categories List -->
+      <div class="mt-4 pt-3 border-t border-slate-100">
+        <label class="block text-xs font-bold text-slate-700 mb-2">Active Categories in Your Store:</label>
+        <div id="categoryChipsContainer" class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1"></div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeCategoryModal()" class="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 spring-bounce shadow-sm">
+          Done & Start Adding Products
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Product Multi-Photo Gallery Manager -->
+  <div id="galleryModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-pop border border-slate-200 max-w-2xl w-full p-6 spring-bounce flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <i class="ph-bold ph-images text-xl"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900" id="galleryModalTitle">Product Photos</h3>
+            <p class="text-xs text-slate-500">Upload multiple angles, featured image, and gallery shots.</p>
+          </div>
+        </div>
+        <button onclick="closeGalleryModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="ph-bold ph-x text-base"></i>
+        </button>
+      </div>
+
+      <!-- Upload Zone Inside Gallery -->
+      <div class="mt-4">
+        <div onclick="document.getElementById('galleryFileInput').click()" 
+          class="border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-2xl p-6 text-center cursor-pointer transition-all">
+          <input type="file" id="galleryFileInput" multiple accept="image/*" class="hidden" onchange="handleGalleryFilesSelected(event)">
+          <i class="ph-bold ph-cloud-arrow-up text-3xl text-slate-400 mb-1"></i>
+          <p class="text-xs font-bold text-slate-700">Click to upload photos (select multiple)</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Supports JPG, PNG, WebP files</p>
+        </div>
+      </div>
+
+      <!-- Photos Grid -->
+      <div class="mt-4 flex-1 overflow-y-auto">
+        <div id="galleryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-1"></div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+        <span id="galleryPhotoCount" class="text-xs text-slate-500 font-semibold">0 photos</span>
+        <button onclick="closeGalleryModal()" class="px-5 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 spring-bounce shadow-sm">
+          Save Photos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Drive Success Notification -->
+  <div id="successModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-pop border border-slate-200 max-w-lg w-full p-6 spring-bounce">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-3 border border-emerald-200/60">
+          <i class="ph-fill ph-check-circle"></i>
+        </div>
+        <h3 class="text-base font-extrabold text-slate-900">Products Sorted & Synced to Google Drive!</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          Photos organized by category and vendor. Formatted Excel file generated with thumbnails. WooCommerce import CSV created for WordPress!
+        </p>
+      </div>
+
+      <div class="mt-4 bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-xs font-mono text-slate-700 break-all" id="successFolderPath">
+        G:\My Drive\Product Catalog\...
+      </div>
+
+      <div class="mt-4 space-y-2">
+        <button onclick="openDriveFolder()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm spring-bounce">
+          <i class="ph-bold ph-folder-open text-base"></i>
+          Open Folder in Windows Explorer
+        </button>
+        <button onclick="downloadLastWooCsv()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm spring-bounce">
+          <i class="ph-bold ph-wordpress-logo text-base"></i>
+          Download WooCommerce CSV (Ready to Import)
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="downloadLastExcel()" class="py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-subtle spring-bounce">
+            <i class="ph-bold ph-file-xls text-emerald-600 text-base"></i>
+            Download Excel
+          </button>
+          <button onclick="downloadLastZip()" class="py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-subtle spring-bounce">
+            <i class="ph-bold ph-archive text-blue-600 text-base"></i>
+            Download ZIP
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <button onclick="toggleSuccessModal(false)" class="text-xs text-slate-400 hover:text-slate-600 font-semibold">
+          Close Window
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Category Colors (Dynamic deterministic assignment)
+    const PALETTE = [
+      { bg: 'bg-[#FCE7F3]', text: 'text-[#9D174D]', stripe: '#EC4899' }, // Pink
+      { bg: 'bg-[#FEF3C7]', text: 'text-[#92400E]', stripe: '#F59E0B' }, // Amber
+      { bg: 'bg-[#E0F2FE]', text: 'text-[#0369A1]', stripe: '#0EA5E9' }, // Sky
+      { bg: 'bg-[#EDE9FE]', text: 'text-[#6D28D9]', stripe: '#8B5CF6' }, // Purple
+      { bg: 'bg-[#FEF9C3]', text: 'text-[#854D0E]', stripe: '#EAB308' }, // Yellow
+      { bg: 'bg-[#DCFCE7]', text: 'text-[#15803D]', stripe: '#22C55E' }, // Green
+      { bg: 'bg-[#FEE2E2]', text: 'text-[#B91C1C]', stripe: '#EF4444' }, // Rose
+      { bg: 'bg-[#E0E7FF]', text: 'text-[#3730A3]', stripe: '#6366F1' }, // Indigo
+      { bg: 'bg-[#CCFBF1]', text: 'text-[#115E59]', stripe: '#14B8A6' }, // Teal
+    ];
+
+    function getCategoryStyle(name) {
+      if (!name) return { bg: 'bg-slate-100', text: 'text-slate-700', stripe: '#94A3B8' };
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      const idx = Math.abs(hash) % PALETTE.length;
+      return PALETTE[idx];
+    }
+
+    const VENDOR_OPTIONS = ['box + cask', 'DIME Design', 'Herman Miller', 'West Elm', 'CB2', 'Muuto', 'Hay'];
+    const SIZE_PRESETS = ['Standard', 'S, M, L, XL', 'Single', 'Double', 'Queen', 'King', 'Custom'];
+
+    // State
+    let categories = ['Bookshelves', 'Chairs'];
+    let products = [];
+    let currentView = 'table';
+    let currencyMode = 'both'; // 'both' | 'ngn' | 'usd'
+    let lastSavedResult = null;
+    let searchQuery = '';
+    let categoryFilter = 'ALL';
+    let inStockOnly = false;
+    let activeGalleryProductId = null;
+
+    // Helper functions to generate options without nested backtick collisions
+    function renderCategoryOptions(selectedType) {
+      let out = '';
+      categories.forEach(c => {
+        const isSel = (c === selectedType) ? ' selected' : '';
+        out += '<option value="' + escapeHtml(c) + '"' + isSel + '>' + escapeHtml(c) + '</option>';
+      });
+      if (selectedType && !categories.includes(selectedType)) {
+        out += '<option value="' + escapeHtml(selectedType) + '" selected>' + escapeHtml(selectedType) + '</option>';
+      }
+      return out;
+    }
+
+    function renderVendorDatalist() {
+      let out = '';
+      VENDOR_OPTIONS.forEach(v => {
+        out += '<option value="' + escapeHtml(v) + '">';
+      });
+      return out;
+    }
+
+    function renderSizesDatalist() {
+      let out = '';
+      SIZE_PRESETS.forEach(s => {
+        out += '<option value="' + escapeHtml(s) + '">';
+      });
+      return out;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSavedDraft();
+      if (products.length === 0) {
+        loadSampleData();
+      } else {
+        render();
+      }
+      checkDriveStatus();
+      updateCategoryDropdowns();
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+          e.preventDefault();
+          addProductRow();
+        }
+      });
+    });
+
+    async function checkDriveStatus() {
+      try {
+        const res = await fetch('/api/drive-status');
+        if (res.ok) {
+          const data = await res.json();
+          const indicator = document.getElementById('driveStatusIndicator');
+          if (data.is_google_drive_connected) {
+            indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Google Drive Ready (' + data.detected_path + ')';
+          } else {
+            indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-500"></span> Local Drive Sync (' + data.detected_path + ')';
+          }
+        }
+      } catch (e) {
+        console.log('Client-only mode');
+      }
+    }
+
+    function generateId() {
+      return 'prod_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Currency Switcher
+    function setCurrencyMode(mode) {
+      currencyMode = mode;
+      const btnBoth = document.getElementById('currTabBoth');
+      const btnNGN = document.getElementById('currTabNGN');
+      const btnUSD = document.getElementById('currTabUSD');
+
+      const activeClass = 'bg-white text-slate-900 shadow-sm font-bold';
+      const inactiveClass = 'hover:text-slate-900 font-semibold';
+
+      [btnBoth, btnNGN, btnUSD].forEach(b => {
+        b.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + inactiveClass;
+      });
+
+      if (mode === 'both') btnBoth.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + activeClass;
+      else if (mode === 'ngn') btnNGN.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + activeClass;
+      else if (mode === 'usd') btnUSD.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + activeClass;
+
+      render();
+      saveDraft();
+    }
+
+    // Category Management
+    function openCategoryModal() {
+      renderCategoryChips();
+      document.getElementById('categoryModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('newCategoryInput').focus(), 100);
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
+      updateCategoryDropdowns();
+      render();
+    }
+
+    function addCustomCategory() {
+      const input = document.getElementById('newCategoryInput');
+      const val = input.value.trim();
+      if (val && !categories.includes(val)) {
+        categories.push(val);
+        input.value = '';
+        renderCategoryChips();
+        updateCategoryDropdowns();
+        saveDraft();
+      }
+    }
+
+    function removeCategory(cat) {
+      categories = categories.filter(c => c !== cat);
+      renderCategoryChips();
+      updateCategoryDropdowns();
+      saveDraft();
+    }
+
+    function applyPreset(presetList) {
+      presetList.forEach(item => {
+        if (!categories.includes(item)) categories.push(item);
+      });
+      renderCategoryChips();
+      updateCategoryDropdowns();
+      saveDraft();
+    }
+
+    function renderCategoryChips() {
+      const container = document.getElementById('categoryChipsContainer');
+      document.getElementById('categoryCountBadge').innerText = categories.length;
+      let html = '';
+      categories.forEach(cat => {
+        const style = getCategoryStyle(cat);
+        html += '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold ' + style.bg + ' ' + style.text + '">' +
+          '<span>' + escapeHtml(cat) + '</span>' +
+          '<button onclick="removeCategory(\'' + escapeHtml(cat) + '\')" class="hover:opacity-70 p-0.5"><i class="ph-bold ph-x text-[11px]"></i></button>' +
+          '</span>';
+      });
+      container.innerHTML = html;
+    }
+
+    function updateCategoryDropdowns() {
+      const filterSelect = document.getElementById('typeFilter');
+      const currentFilter = filterSelect.value;
+      let optionsHtml = '<option value="ALL">All Categories</option>';
+      categories.forEach(c => {
+        const isSel = (c === currentFilter) ? ' selected' : '';
+        optionsHtml += '<option value="' + escapeHtml(c) + '"' + isSel + '>' + escapeHtml(c) + '</option>';
+      });
+      filterSelect.innerHTML = optionsHtml;
+      document.getElementById('categoryCountBadge').innerText = categories.length;
+    }
+
+    // Filtering
+    function getFilteredProducts() {
+      return products.filter(p => {
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matchName = (p.name || '').toLowerCase().includes(q);
+          const matchVendor = (p.vendor || '').toLowerCase().includes(q);
+          const matchType = (p.type || '').toLowerCase().includes(q);
+          const matchSizes = (p.sizes || '').toLowerCase().includes(q);
+          if (!matchName && !matchVendor && !matchType && !matchSizes) return false;
+        }
+        if (categoryFilter !== 'ALL' && p.type !== categoryFilter) {
+          return false;
+        }
+        if (inStockOnly && !p.in_stock) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function handleSearch(val) {
+      searchQuery = val.trim();
+      render();
+    }
+
+    function filterByType(val) {
+      categoryFilter = val;
+      render();
+    }
+
+    function toggleInStockFilter() {
+      inStockOnly = !inStockOnly;
+      const btn = document.getElementById('inStockFilterBtn');
+      if (inStockOnly) {
+        btn.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-300');
+        btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+      } else {
+        btn.classList.remove('bg-emerald-50', 'text-emerald-700', 'border-emerald-300');
+        btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+      }
+      render();
+    }
+
+    // Render Table and Cards
+    function render() {
+      renderTableHeader();
+      renderTable();
+      renderCards();
+      updateStats();
+      saveDraft();
+    }
+
+    function renderTableHeader() {
+      const thead = document.getElementById('tableHeader');
+      let priceCols = '';
+
+      if (currencyMode === 'both') {
+        priceCols = 
+          '<th class="w-32 px-3 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">$</span> Unit cost ($)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-36 px-3 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">₦</span> Unit cost (₦)' +
+            '</div>' +
+          '</th>';
+      } else if (currencyMode === 'usd') {
+        priceCols = 
+          '<th class="w-36 px-4 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">$</span> Unit cost ($ USD)' +
+            '</div>' +
+          '</th>';
+      } else { // 'ngn'
+        priceCols = 
+          '<th class="w-36 px-4 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">₦</span> Unit cost (₦ NGN)' +
+            '</div>' +
+          '</th>';
+      }
+
+      thead.innerHTML = 
+        '<tr>' +
+          '<th class="w-10 px-3 py-3 text-center border-r border-slate-200/80">#</th>' +
+          '<th class="w-64 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">A</span> Name' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-40 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-tag text-slate-400"></i> Type (Category)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-52 px-4 py-3 border-r border-slate-200/80 text-center">' +
+            '<div class="flex items-center justify-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-images text-slate-400"></i> Images (Photos)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-40 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-buildings text-slate-400"></i> Vendor' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-24 px-3 py-3 border-r border-slate-200/80 text-center">' +
+            '<div class="flex items-center justify-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-check-square text-slate-400"></i> In stock' +
+            '</div>' +
+          '</th>' +
+          priceCols +
+          '<th class="w-40 px-4 py-3 border-r border-slate-200/80 text-center">' +
+            '<div class="flex items-center justify-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-arrows-out-simple text-slate-400"></i> Sizes' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-52 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">A</span> Size (WxLxH)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-16 px-2 py-3 text-center text-slate-400"></th>' +
+        '</tr>';
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('productTableBody');
+      const emptyState = document.getElementById('tableEmptyState');
+      const filtered = getFilteredProducts();
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      let html = '';
+      filtered.forEach((p, idx) => {
+        const theme = getCategoryStyle(p.type);
+        const images = Array.isArray(p.images) ? p.images : (p.image_data ? [p.image_data] : []);
+        const primaryImg = images.length > 0 ? images[0] : null;
+
+        let imgHtml = '';
+        if (primaryImg) {
+          const badgeMore = images.length > 1 ? '<span class="absolute bottom-1 right-1 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">+' + (images.length - 1) + '</span>' : '';
+          imgHtml = '<div onclick="openGalleryModal(\'' + p.id + '\')" class="relative group/img inline-block rounded-xl overflow-hidden border border-slate-200 shadow-subtle bg-slate-50 w-24 h-16 cursor-pointer hover:border-blue-400 transition-all">' +
+            '<img src="' + primaryImg + '" alt="Thumb" class="w-full h-full object-cover">' +
+            badgeMore +
+            '<div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/img:opacity-100 flex items-center justify-center gap-1.5 transition-opacity text-white text-xs font-bold">' +
+            '<i class="ph-bold ph-pencil-simple"></i> Edit (' + images.length + ')' +
+            '</div></div>';
+        } else {
+          imgHtml = '<div onclick="openGalleryModal(\'' + p.id + '\')" class="w-24 h-14 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer transition-all">' +
+            '<i class="ph-bold ph-images text-lg"></i><span class="text-[10px] font-bold">+ Photos</span></div>';
+        }
+
+        // Price columns
+        let priceInputs = '';
+        const costUsd = (p.unit_cost_usd !== undefined && p.unit_cost_usd !== '') ? p.unit_cost_usd : (p.unit_cost || '');
+        const costNgn = (p.unit_cost_ngn !== undefined && p.unit_cost_ngn !== '') ? p.unit_cost_ngn : '';
+
+        if (currencyMode === 'both') {
+          priceInputs = 
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2 text-slate-400 font-mono text-xs">$</span>' +
+                '<input type="number" step="0.01" min="0" class="table-input pl-5 text-right font-mono font-bold text-slate-900" value="' + costUsd + '" placeholder="0.00" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_usd\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>' +
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2 text-slate-400 font-mono text-xs">₦</span>' +
+                '<input type="number" step="1" min="0" class="table-input pl-5 text-right font-mono font-bold text-slate-900" value="' + costNgn + '" placeholder="0" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_ngn\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>';
+        } else if (currencyMode === 'usd') {
+          priceInputs = 
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2.5 text-slate-400 font-mono text-xs">$</span>' +
+                '<input type="number" step="0.01" min="0" class="table-input pl-6 text-right font-mono font-bold text-slate-900" value="' + costUsd + '" placeholder="0.00" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_usd\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>';
+        } else { // 'ngn'
+          priceInputs = 
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2.5 text-slate-400 font-mono text-xs">₦</span>' +
+                '<input type="number" step="1" min="0" class="table-input pl-6 text-right font-mono font-bold text-slate-900" value="' + costNgn + '" placeholder="0" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_ngn\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>';
+        }
+
+        html += '<tr class="hover:bg-slate-50/80 transition-colors group">' +
+          '<td class="relative px-3 py-3 text-center border-r border-slate-200/70 font-mono text-slate-400 text-xs select-none">' +
+          '<div class="absolute left-0 top-0 bottom-0 w-1" style="background-color: ' + theme.stripe + '"></div>' + (idx + 1) + '</td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70">' +
+          '<input type="text" class="table-input font-bold text-slate-900" value="' + escapeHtml(p.name || '') + '" placeholder="Product name..." onchange="updateProductField(\'' + p.id + '\', \'name\', this.value)">' +
+          '</td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70"><div class="relative">' +
+          '<select class="w-full text-xs font-bold px-2.5 py-1 rounded-md border border-transparent hover:border-slate-300 focus:outline-none cursor-pointer ' + theme.bg + ' ' + theme.text + ' transition-all" onchange="updateProductField(\'' + p.id + '\', \'type\', this.value)">' +
+          renderCategoryOptions(p.type) +
+          '</select></div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70 text-center"><div class="flex items-center justify-center">' + imgHtml + '</div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70"><div class="relative">' +
+          '<input type="text" list="vendorList" class="w-full text-xs font-bold px-2.5 py-1 rounded-md bg-[#EEF2F6] text-[#334155] border border-transparent hover:border-slate-300 focus:outline-none" value="' + escapeHtml(p.vendor || '') + '" placeholder="Vendor..." onchange="updateProductField(\'' + p.id + '\', \'vendor\', this.value)">' +
+          '<datalist id="vendorList">' + renderVendorDatalist() + '</datalist></div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70 text-center">' +
+          '<button onclick="toggleProductStock(\'' + p.id + '\')" class="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base spring-bounce ' + (p.in_stock ? 'bg-amber-50 text-amber-500 hover:bg-amber-100 border border-amber-200/60' : 'text-slate-300 hover:text-slate-400 bg-slate-50 border border-slate-200/50') + '" title="' + (p.in_stock ? 'In Stock (Click to toggle)' : 'Out of Stock') + '">' + (p.in_stock ? '👍' : '—') + '</button></td>' +
+          priceInputs +
+          '<td class="px-3 py-2 border-r border-slate-200/70 text-center"><div class="relative">' +
+          '<input type="text" list="sizesList" class="table-input text-center font-medium text-slate-700 bg-slate-50/60 hover:bg-white" value="' + escapeHtml(p.sizes || '') + '" placeholder="e.g. S, M, L or Standard" onchange="updateProductField(\'' + p.id + '\', \'sizes\', this.value)">' +
+          '<datalist id="sizesList">' + renderSizesDatalist() + '</datalist></div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70">' +
+          '<input type="text" class="table-input text-slate-700 font-mono text-xs" value="' + escapeHtml(p.size || '') + '" placeholder="e.g. 12x7x8 or H 31.75&quot;" onchange="updateProductField(\'' + p.id + '\', \'size\', this.value)"></td>' +
+          '<td class="px-2 py-2 text-center select-none"><div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">' +
+          '<button onclick="duplicateProduct(\'' + p.id + '\')" title="Duplicate product" class="p-1 text-slate-400 hover:text-slate-700 rounded"><i class="ph-bold ph-copy text-sm"></i></button>' +
+          '<button onclick="deleteProduct(\'' + p.id + '\')" title="Delete product" class="p-1 text-slate-400 hover:text-rose-600 rounded"><i class="ph-bold ph-trash text-sm"></i></button>' +
+          '</div></td></tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cardView');
+      const filtered = getFilteredProducts();
+      let html = '';
+      filtered.forEach((p, idx) => {
+        const theme = getCategoryStyle(p.type);
+        const images = Array.isArray(p.images) ? p.images : (p.image_data ? [p.image_data] : []);
+        const primaryImg = images.length > 0 ? images[0] : null;
+
+        let imgHtml = '';
+        if (primaryImg) {
+          imgHtml = '<img src="' + primaryImg + '" alt="' + escapeHtml(p.name) + '" class="w-full h-full object-cover">' +
+            '<div class="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white px-2 py-1 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm">' +
+            '<i class="ph-bold ph-images"></i> ' + images.length + '</div>';
+        } else {
+          imgHtml = '<div class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-500">' +
+            '<i class="ph-bold ph-images text-3xl"></i><span class="text-xs font-bold mt-1">+ Upload Photos</span></div>';
+        }
+
+        const costUsd = (p.unit_cost_usd !== undefined && p.unit_cost_usd !== '') ? p.unit_cost_usd : (p.unit_cost || 0);
+        const costNgn = (p.unit_cost_ngn !== undefined && p.unit_cost_ngn !== '') ? p.unit_cost_ngn : 0;
+
+        let priceDisplay = '';
+        if (currencyMode === 'both') {
+          priceDisplay = 
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-extrabold text-slate-900 text-sm font-mono">$' + costUsd.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</span>' +
+              '<span class="text-slate-300">•</span>' +
+              '<span class="font-extrabold text-emerald-700 text-sm font-mono">₦' + costNgn.toLocaleString('en-US', { minimumFractionDigits: 0 }) + '</span>' +
+            '</div>';
+        } else if (currencyMode === 'usd') {
+          priceDisplay = '<span class="font-extrabold text-slate-900 text-sm font-mono">$' + costUsd.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</span>';
+        } else {
+          priceDisplay = '<span class="font-extrabold text-emerald-700 text-sm font-mono">₦' + costNgn.toLocaleString('en-US', { minimumFractionDigits: 0 }) + '</span>';
+        }
+
+        html += '<div class="bg-white rounded-3xl border border-slate-200 shadow-subtle p-4 flex flex-col justify-between hover:shadow-float transition-all relative overflow-hidden group">' +
+          '<div class="absolute top-0 left-0 right-0 h-1.5" style="background-color: ' + theme.stripe + '"></div>' +
+          '<div onclick="openGalleryModal(\'' + p.id + '\')" class="relative w-full h-44 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center mb-3 cursor-pointer group/cardimg">' +
+          imgHtml + '</div>' +
+          '<div class="space-y-2 flex-1"><div class="flex items-center justify-between">' +
+          '<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-lg ' + theme.bg + ' ' + theme.text + '">' + escapeHtml(p.type || 'General') + '</span>' +
+          '<span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-[#EEF2F6] text-[#334155]">' + escapeHtml(p.vendor || 'General') + '</span></div>' +
+          '<input type="text" class="w-full font-extrabold text-slate-900 text-sm border-b border-transparent hover:border-slate-200 focus:border-blue-500 focus:outline-none" value="' + escapeHtml(p.name || '') + '" placeholder="Product Name..." onchange="updateProductField(\'' + p.id + '\', \'name\', this.value)">' +
+          '<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">' +
+          '<span class="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md font-semibold text-[11px]">Sizes: ' + escapeHtml(p.sizes || 'Standard') + '</span>' +
+          priceDisplay +
+          '</div></div>' +
+          '<div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">' +
+          '<button onclick="toggleProductStock(\'' + p.id + '\')" class="text-xs font-bold flex items-center gap-1.5 ' + (p.in_stock ? 'text-amber-600' : 'text-slate-400') + '">' + (p.in_stock ? '👍 In Stock' : '— Out of Stock') + '</button>' +
+          '<div class="flex items-center gap-1">' +
+          '<button onclick="duplicateProduct(\'' + p.id + '\')" class="p-1.5 text-slate-400 hover:text-slate-700"><i class="ph-bold ph-copy"></i></button>' +
+          '<button onclick="deleteProduct(\'' + p.id + '\')" class="p-1.5 text-slate-400 hover:text-rose-600"><i class="ph-bold ph-trash"></i></button>' +
+          '</div></div></div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function switchView(view) {
+      currentView = view;
+      const tableView = document.getElementById('tableView');
+      const cardView = document.getElementById('cardView');
+      const viewTableBtn = document.getElementById('viewTableBtn');
+      const viewCardBtn = document.getElementById('viewCardBtn');
+
+      if (view === 'table') {
+        tableView.classList.remove('hidden');
+        cardView.classList.add('hidden');
+        viewTableBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm font-bold transition-all';
+        viewCardBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all';
+      } else {
+        tableView.classList.add('hidden');
+        cardView.classList.remove('hidden');
+        viewCardBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm font-bold transition-all';
+        viewTableBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all';
+      }
+    }
+
+    // Gallery Manager Modal
+    function openGalleryModal(prodId) {
+      activeGalleryProductId = prodId;
+      const prod = products.find(p => p.id === prodId);
+      if (!prod) return;
+
+      document.getElementById('galleryModalTitle').innerText = (prod.name || 'Product') + ' Photos';
+      renderGalleryGrid();
+      document.getElementById('galleryModal').classList.remove('hidden');
+    }
+
+    function closeGalleryModal() {
+      document.getElementById('galleryModal').classList.add('hidden');
+      activeGalleryProductId = null;
+      render();
+    }
+
+    function renderGalleryGrid() {
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (!prod) return;
+
+      const images = Array.isArray(prod.images) ? prod.images : (prod.image_data ? [prod.image_data] : []);
+      prod.images = images;
+      const grid = document.getElementById('galleryGrid');
+      document.getElementById('galleryPhotoCount').innerText = images.length + ' photos';
+
+      let html = '';
+      images.forEach((img, idx) => {
+        const badgeMain = (idx === 0) ? '<span class="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-sm">★ Main Featured</span>' :
+          '<button onclick="setMainGalleryPhoto(' + idx + ')" class="absolute top-2 left-2 bg-white/90 hover:bg-white text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">Set as Main</button>';
+
+        html += '<div class="relative group/thumb rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-36 flex items-center justify-center shadow-subtle">' +
+          '<img src="' + img + '" class="w-full h-full object-cover">' +
+          badgeMain +
+          '<button onclick="removeGalleryPhoto(' + idx + ')" class="absolute top-2 right-2 bg-rose-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm hover:bg-rose-700 transition-colors">' +
+          '<i class="ph-bold ph-trash text-xs"></i></button></div>';
+      });
+      grid.innerHTML = html;
+    }
+
+    function setMainGalleryPhoto(idx) {
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (prod && prod.images[idx]) {
+        const selected = prod.images.splice(idx, 1)[0];
+        prod.images.unshift(selected);
+        prod.image_data = prod.images[0];
+        renderGalleryGrid();
+        saveDraft();
+      }
+    }
+
+    function removeGalleryPhoto(idx) {
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (prod) {
+        prod.images.splice(idx, 1);
+        prod.image_data = prod.images[0] || '';
+        renderGalleryGrid();
+        saveDraft();
+      }
+    }
+
+    function handleGalleryFilesSelected(e) {
+      const files = Array.from(e.target.files);
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (!prod) return;
+
+      files.forEach(file => {
+        processImageFile(file, (b64) => {
+          if (!prod.images) prod.images = [];
+          prod.images.push(b64);
+          if (!prod.image_data) prod.image_data = b64;
+          renderGalleryGrid();
+          saveDraft();
+        });
+      });
+    }
+
+    // CRUD
+    function addProductRow(data = {}) {
+      const defaultCat = categories.length > 0 ? categories[0] : 'General';
+      const newProd = {
+        id: generateId(),
+        name: data.name || '',
+        type: data.type || defaultCat,
+        vendor: data.vendor || 'box + cask',
+        in_stock: data.in_stock !== undefined ? data.in_stock : true,
+        unit_cost_usd: data.unit_cost_usd !== undefined ? data.unit_cost_usd : (data.unit_cost || 0.0),
+        unit_cost_ngn: data.unit_cost_ngn !== undefined ? data.unit_cost_ngn : 0.0,
+        unit_cost: data.unit_cost_usd !== undefined ? data.unit_cost_usd : (data.unit_cost || 0.0),
+        sizes: data.sizes || 'Standard',
+        size: data.size || '',
+        images: data.images || (data.image_data ? [data.image_data] : [])
+      };
+      products.push(newProd);
+      render();
+    }
+
+    function updateProductField(id, field, value) {
+      const prod = products.find(p => p.id === id);
+      if (prod) {
+        prod[field] = value;
+        if (field === 'unit_cost_usd') prod.unit_cost = value;
+        render();
+      }
+    }
+
+    function toggleProductStock(id) {
+      const prod = products.find(p => p.id === id);
+      if (prod) {
+        prod.in_stock = !prod.in_stock;
+        render();
+      }
+    }
+
+    function duplicateProduct(id) {
+      const prod = products.find(p => p.id === id);
+      if (prod) {
+        const copy = JSON.parse(JSON.stringify(prod));
+        copy.id = generateId();
+        copy.name = copy.name + ' (Copy)';
+        const idx = products.findIndex(p => p.id === id);
+        products.splice(idx + 1, 0, copy);
+        render();
+      }
+    }
+
+    function deleteProduct(id) {
+      products = products.filter(p => p.id !== id);
+      render();
+    }
+
+    // Image processing
+    function processImageFile(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.88));
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Live Stats Bar update (NO TOTAL SUM)
+    function updateStats() {
+      const count = products.length;
+      const inStockCount = products.filter(p => p.in_stock).length;
+      const totalPhotos = products.reduce((acc, p) => acc + (Array.isArray(p.images) ? p.images.length : (p.image_data ? 1 : 0)), 0);
+
+      document.getElementById('recordCountBadge').innerText = count + ' records';
+      document.getElementById('inStockSummary').innerText = inStockCount + ' in stock';
+      document.getElementById('photosSummary').innerText = totalPhotos + ' photos';
+    }
+
+    // Load Screenshot Demo Data
+    async function loadSampleData() {
+      try {
+        const res = await fetch('/api/sample');
+        if (res.ok) {
+          products = await res.json();
+          ['Bookshelves', 'Chairs'].forEach(c => {
+            if (!categories.includes(c)) categories.push(c);
+          });
+          updateCategoryDropdowns();
+          render();
+        }
+      } catch (err) {
+        console.error('Failed to load sample');
+      }
+    }
+
+    // Persistence
+    function saveDraft() {
+      try {
+        localStorage.setItem('wc_catalog_draft_products', JSON.stringify(products));
+        localStorage.setItem('wc_catalog_draft_categories', JSON.stringify(categories));
+        localStorage.setItem('wc_catalog_draft_title', document.getElementById('catalogTitle').value);
+        localStorage.setItem('wc_catalog_draft_client', document.getElementById('clientName').value);
+        localStorage.setItem('wc_catalog_draft_currency', currencyMode);
+      } catch (e) {}
+    }
+
+    function loadSavedDraft() {
+      try {
+        const saved = localStorage.getItem('wc_catalog_draft_products');
+        if (saved) products = JSON.parse(saved);
+        const savedCats = localStorage.getItem('wc_catalog_draft_categories');
+        if (savedCats) categories = JSON.parse(savedCats);
+        const t = localStorage.getItem('wc_catalog_draft_title');
+        if (t) document.getElementById('catalogTitle').value = t;
+        const c = localStorage.getItem('wc_catalog_draft_client');
+        if (c) document.getElementById('clientName').value = c;
+        const cur = localStorage.getItem('wc_catalog_draft_currency');
+        if (cur) setCurrencyMode(cur);
+      } catch (e) {}
+    }
+
+    function clearCatalogPrompt() {
+      if (confirm('Clear all products and reset?')) {
+        products = [];
+        render();
+        localStorage.removeItem('wc_catalog_draft_products');
+      }
+      toggleExportMenu(false);
+    }
+
+    // Save to Google Drive
+    async function saveToDrive() {
+      const syncBtn = document.getElementById('syncDriveBtn');
+      const originalText = syncBtn.innerHTML;
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-base"></i> Syncing to Drive...';
+
+      const payload = {
+        client_name: document.getElementById('clientName').value || 'Client',
+        catalog_title: document.getElementById('catalogTitle').value || 'Catalog',
+        products: products
+      };
+
+      try {
+        const res = await fetch('/api/save-catalog', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          lastSavedResult = data;
+          document.getElementById('successFolderPath').innerText = data.catalog_root;
+          toggleSuccessModal(true);
+        } else {
+          alert('Error saving to Drive: ' + (data.message || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Server connection error. Using client-side ZIP fallback.');
+        downloadZipClientSide();
+      } finally {
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = originalText;
+      }
+    }
+
+    function toggleSuccessModal(show) {
+      document.getElementById('successModal').classList.toggle('hidden', !show);
+    }
+
+    async function openDriveFolder() {
+      if (lastSavedResult && lastSavedResult.catalog_root) {
+        await fetch('/api/open-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder_path: lastSavedResult.catalog_root })
+        });
+      }
+    }
+
+    function downloadLastExcel() {
+      if (lastSavedResult && lastSavedResult.excel_path) {
+        window.location.href = '/api/download-excel?path=' + encodeURIComponent(lastSavedResult.excel_path);
+      }
+    }
+
+    function downloadLastWooCsv() {
+      if (lastSavedResult && lastSavedResult.woocommerce_csv_path) {
+        window.location.href = '/api/download-woo-csv?path=' + encodeURIComponent(lastSavedResult.woocommerce_csv_path);
+      }
+    }
+
+    function downloadLastZip() {
+      if (lastSavedResult && lastSavedResult.zip_path) {
+        window.location.href = '/api/download-zip?path=' + encodeURIComponent(lastSavedResult.zip_path);
+      }
+    }
+
+    function toggleExportMenu(forceState) {
+      const menu = document.getElementById('exportMenu');
+      if (forceState !== undefined) {
+        menu.classList.toggle('hidden', !forceState);
+      } else {
+        menu.classList.toggle('hidden');
+      }
+    }
+
+    function downloadExcelDirect() {
+      if (lastSavedResult) downloadLastExcel();
+      else saveToDrive();
+      toggleExportMenu(false);
+    }
+
+    function downloadWooCsvDirect() {
+      if (lastSavedResult) downloadLastWooCsv();
+      else saveToDrive();
+      toggleExportMenu(false);
+    }
+
+    function downloadZipDirect() {
+      if (lastSavedResult) downloadLastZip();
+      else saveToDrive();
+      toggleExportMenu(false);
+    }
+
+    // Standalone ZIP fallback with dual currency in WooCommerce CSV (NO total sum)
+    async function downloadZipClientSide() {
+      const zip = new JSZip();
+      const client = document.getElementById('clientName').value || 'Client';
+      const title = document.getElementById('catalogTitle').value || 'Catalog';
+      const rootFolder = zip.folder(client + '_' + title);
+      const categoryFolder = rootFolder.folder("Products_By_Category");
+      const vendorFolder = rootFolder.folder("Products_By_Vendor");
+
+      let csvContent = "Type,SKU,Name,Published,Is featured?,Visibility in catalog,Short description,Description,In stock?,Regular price,Regular price (USD),Regular price (NGN),Categories,Tags,Images,Attribute 1 name,Attribute 1 value(s),Attribute 1 visible,Attribute 1 global\n";
+
+      products.forEach((p, idx) => {
+        const cleanName = (p.name || ('Product_' + (idx+1))).replace(/[\\/*?:"<>|]/g, '_');
+        const cleanVendor = (p.vendor || 'General').replace(/[\\/*?:"<>|]/g, '_');
+        const cleanType = (p.type || 'Uncategorized').replace(/[\\/*?:"<>|]/g, '_');
+        const costUsd = p.unit_cost_usd !== undefined ? p.unit_cost_usd : (p.unit_cost || 0);
+        const costNgn = p.unit_cost_ngn || 0;
+        const mainCost = costUsd || costNgn || 0;
+        const inStock = p.in_stock ? 1 : 0;
+        const sizes = p.sizes || '';
+        const dims = p.size || '';
+        const attrVal = [sizes, dims ? ('Dimensions: ' + dims) : ''].filter(Boolean).join(', ');
+
+        const images = Array.isArray(p.images) ? p.images : (p.image_data ? [p.image_data] : []);
+        const imgNames = [];
+
+        images.forEach((imgB64, imgIdx) => {
+          if (imgB64 && imgB64.includes('base64,')) {
+            const b64Data = imgB64.split('base64,')[1];
+            const filename = (imgIdx === 0) ? ('01_featured_' + cleanName + '.jpg') : ((imgIdx+1) + '_gallery_' + cleanName + '.jpg');
+            imgNames.push(filename);
+            categoryFolder.file(cleanType + '/' + cleanName + ' (' + cleanVendor + ')/' + filename, b64Data, { base64: true });
+            vendorFolder.file(cleanVendor + '/' + cleanType + '/' + cleanName + '/' + filename, b64Data, { base64: true });
+          }
+        });
+
+        csvContent += '"simple","WC-' + String(idx+1).padStart(4, '0') + '","' + cleanName + '",1,0,"visible","' + cleanType + '","' + (dims ? ('Size: ' + dims) : '') + '",' + inStock + ',' + mainCost + ',' + costUsd + ',' + costNgn + ',"' + cleanType + '","' + cleanVendor + '","' + imgNames.join(', ') + '","Size","' + attrVal + '",1,1\n';
+      });
+
+      rootFolder.file("woocommerce_import.csv", csvContent);
+      rootFolder.file("catalog_manifest.json", JSON.stringify(products, null, 2));
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      saveAs(blob, client + '_' + title + '.zip');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

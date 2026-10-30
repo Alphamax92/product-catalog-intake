@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Product Catalog Intake Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
+            'float': '0 12px 28px -6px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03)',
+            'pop': '0 24px 48px -12px rgba(15, 23, 42, 0.16), 0 12px 16px -8px rgba(15, 23, 42, 0.06)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Emil Kowalski Spring Physics & Micro-interactions */
+    .spring-bounce {
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background-color 0.15s ease;
+    }
+    .spring-bounce:hover { transform: translateY(-1.5px) scale(1.008); }
+    .spring-bounce:active { transform: translateY(1px) scale(0.98); }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: #F8FAFC; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    .table-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #1E293B;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .table-input:hover { background: #F8FAFC; border-color: #E2E8F0; }
+    .table-input:focus {
+      background: #FFFFFF;
+      border-color: #7C3AED;
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12);
+      outline: none;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 antialiased min-h-screen flex flex-col font-sans selection:bg-purple-100 selection:text-purple-900 pb-24">
+
+  <!-- Client Header -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-subtle px-6 py-3.5">
+    <div class="max-w-[1700px] mx-auto flex items-center justify-between gap-4 flex-wrap">
+      
+      <!-- Brand & Metadata -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm shrink-0">
+          <i class="ph-bold ph-storefront text-xl"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-slate-900 text-base sm:text-lg">Product Catalog Intake Portal</h1>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">WordPress & WooCommerce Ready</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <span>Store / Brand:</span>
+            <input id="clientName" type="text" value="My Store" 
+              class="font-semibold text-slate-700 border-b border-dashed border-slate-300 hover:border-slate-400 focus:border-purple-600 px-1 py-0.2 focus:outline-none w-44"
+              placeholder="e.g. Acme Studio" oninput="saveDraft()">
+            <span class="text-slate-300">•</span>
+            <span class="text-emerald-600 font-semibold flex items-center gap-1">
+              <i class="ph-fill ph-check-circle"></i> Auto-saved in browser
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Currency Tabs & Action Buttons -->
+      <div class="flex items-center gap-3 flex-wrap">
+        
+        <!-- Dual Currency Tabs in Price -->
+        <div class="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold text-slate-600">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 select-none">Price:</span>
+          <button id="currTabBoth" onclick="setCurrencyMode('both')" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm font-bold transition-all">
+            Both (₦ & $)
+          </button>
+          <button id="currTabNGN" onclick="setCurrencyMode('ngn')" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all">
+            ₦ NGN
+          </button>
+          <button id="currTabUSD" onclick="setCurrencyMode('usd')" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:text-slate-900 font-semibold transition-all">
+            $ USD
+          </button>
+        </div>
+
+        <!-- Step 1: Category Setup -->
+        <button onclick="openCategoryModal()" class="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-3.5 py-2 rounded-xl spring-bounce shadow-subtle">
+          <i class="ph-bold ph-folders text-base"></i>
+          Step 1: Set Categories (<span id="categoryCountBadge">2</span>)
+        </button>
+
+        <!-- Finish & Download -->
+        <button onclick="exportAndDownloadZip()" class="flex items-center gap-2 text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 px-5 py-2 rounded-xl shadow-sm spring-bounce">
+          <i class="ph-bold ph-download-simple text-emerald-400 text-base"></i>
+          Finish & Download Catalog (.zip)
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Step Instructions Banner -->
+  <section class="max-w-[1700px] mx-auto w-full px-6 pt-4 pb-2">
+    <div class="bg-gradient-to-r from-purple-50/90 via-white to-blue-50/80 rounded-2xl border border-purple-100 p-4 shadow-subtle flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+          ✓
+        </div>
+        <div>
+          <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider">How to complete your product catalog:</h2>
+          <p class="text-xs text-slate-600 mt-0.5">
+            1. Click <strong>"Step 1: Set Categories"</strong> to add your store's categories. 
+            2. Enter your products in the table below. 
+            3. Click <strong>"+ Photos"</strong> on each product to attach multiple pictures (featured and gallery shots).
+            4. Toggle between <strong>₦ Naira</strong>, <strong>$ Dollars</strong>, or <strong>Both</strong> to enter prices.
+            5. When done, click <strong>Finish & Download</strong>!
+          </p>
+        </div>
+      </div>
+      <button onclick="addProductRow()" class="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-white hover:bg-purple-50 border border-purple-200 px-3.5 py-1.5 rounded-xl spring-bounce shadow-subtle shrink-0">
+        <i class="ph-bold ph-plus text-sm"></i>
+        + Add New Product
+      </button>
+    </div>
+  </section>
+
+  <!-- Main Table -->
+  <main class="max-w-[1700px] mx-auto w-full px-6 flex-1 flex flex-col pt-1">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-subtle overflow-hidden flex-1 flex flex-col">
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-left text-xs min-w-[1300px]">
+          <thead id="tableHeader" class="bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-10 text-slate-500 font-semibold uppercase tracking-wider text-[11px] select-none">
+            <!-- Rendered dynamically based on currency mode -->
+          </thead>
+          <tbody id="productTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+
+      <!-- Empty State (No mention of bulk upload) -->
+      <div id="tableEmptyState" class="hidden p-16 text-center flex flex-col items-center justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl mb-3">
+          <i class="ph-bold ph-shopping-bag"></i>
+        </div>
+        <h3 class="text-sm font-bold text-slate-800">No products entered yet</h3>
+        <p class="text-xs text-slate-500 max-w-sm mt-1">First set your categories, then click below to add your first product and attach photos.</p>
+        <button onclick="addProductRow()" class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 shadow-sm spring-bounce">
+          + Add First Product
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky Footer (NO TOTAL SUM) -->
+  <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-6 py-2.5 shadow-pop">
+    <div class="max-w-[1700px] mx-auto flex items-center justify-between gap-4 text-xs font-semibold text-slate-600">
+      <div class="flex items-center gap-4">
+        <button onclick="addProductRow()" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-lg text-slate-800 font-bold transition-all">
+          <i class="ph-bold ph-plus text-sm"></i>
+          Add...
+        </button>
+        <span id="recordCountBadge" class="text-slate-600 font-bold">0 records</span>
+        <span class="text-slate-300">•</span>
+        <span id="inStockSummary" class="text-emerald-600 font-semibold">0 in stock</span>
+        <span class="text-slate-300">•</span>
+        <span id="photosSummary" class="text-blue-600 font-semibold">0 photos</span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="exportAndDownloadZip()" class="flex items-center gap-1.5 px-5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg shadow-sm spring-bounce">
+          <i class="ph-bold ph-download-simple text-emerald-400 text-sm"></i>
+          Download Completed Catalog (.zip)
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL: Category Setup (Step 1) -->
+  <div id="categoryModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-pop border border-slate-200 max-w-lg w-full p-6 spring-bounce">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <i class="ph-bold ph-folders text-xl"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Define Your Store Categories</h3>
+            <p class="text-xs text-slate-500">Add the categories that fit your products.</p>
+          </div>
+        </div>
+        <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="ph-bold ph-x text-base"></i>
+        </button>
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1">Add a Category:</label>
+        <div class="flex gap-2">
+          <input id="newCategoryInput" type="text" placeholder="e.g. Dresses, Shoes, Lighting, Tables..." 
+            class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-purple-600 focus:outline-none"
+            onkeydown="if(event.key === 'Enter') addCustomCategory()">
+          <button onclick="addCustomCategory()" class="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 spring-bounce">
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Presets for fast setup -->
+      <div class="mt-3">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quick Presets:</span>
+        <div class="flex gap-1.5 flex-wrap mt-1.5">
+          <button onclick="applyPreset(['Bookshelves', 'Chairs', 'Tables', 'Sofas', 'Lighting'])" class="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium">Furniture</button>
+          <button onclick="applyPreset(['Dresses', 'Tops', 'Pants', 'Shoes', 'Bags'])" class="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium">Fashion</button>
+          <button onclick="applyPreset(['Skincare', 'Makeup', 'Haircare', 'Fragrance'])" class="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-medium">Beauty</button>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100">
+        <label class="block text-xs font-bold text-slate-700 mb-2">Active Categories:</label>
+        <div id="categoryChipsContainer" class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1"></div>
+      </div>
+
+      <div class="mt-6">
+        <button onclick="closeCategoryModal()" class="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 spring-bounce shadow-sm">
+          Save Categories & Continue
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Multi-Photo Gallery per Product -->
+  <div id="galleryModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-pop border border-slate-200 max-w-2xl w-full p-6 spring-bounce flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <i class="ph-bold ph-images text-xl"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900" id="galleryModalTitle">Product Photos</h3>
+            <p class="text-xs text-slate-500">Upload multiple photos for this product (first is featured, rest are gallery).</p>
+          </div>
+        </div>
+        <button onclick="closeGalleryModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="ph-bold ph-x text-base"></i>
+        </button>
+      </div>
+
+      <div class="mt-4">
+        <div onclick="document.getElementById('galleryFileInput').click()" 
+          class="border-2 border-dashed border-slate-300 hover:border-purple-600 hover:bg-purple-50/40 rounded-2xl p-6 text-center cursor-pointer transition-all">
+          <input type="file" id="galleryFileInput" multiple accept="image/*" class="hidden" onchange="handleGalleryFilesSelected(event)">
+          <i class="ph-bold ph-cloud-arrow-up text-3xl text-slate-400 mb-1"></i>
+          <p class="text-xs font-bold text-slate-700">Click to upload photos (select multiple)</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Supports JPG, PNG, WebP images</p>
+        </div>
+      </div>
+
+      <div class="mt-4 flex-1 overflow-y-auto">
+        <div id="galleryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-1"></div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+        <span id="galleryPhotoCount" class="text-xs text-slate-500 font-semibold">0 photos</span>
+        <button onclick="closeGalleryModal()" class="px-5 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 spring-bounce shadow-sm">
+          Save Photos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Palette for categories
+    const PALETTE = [
+      { bg: 'bg-[#FCE7F3]', text: 'text-[#9D174D]', stripe: '#EC4899' },
+      { bg: 'bg-[#FEF3C7]', text: 'text-[#92400E]', stripe: '#F59E0B' },
+      { bg: 'bg-[#E0F2FE]', text: 'text-[#0369A1]', stripe: '#0EA5E9' },
+      { bg: 'bg-[#EDE9FE]', text: 'text-[#6D28D9]', stripe: '#8B5CF6' },
+      { bg: 'bg-[#DCFCE7]', text: 'text-[#15803D]', stripe: '#22C55E' },
+      { bg: 'bg-[#FEE2E2]', text: 'text-[#B91C1C]', stripe: '#EF4444' },
+      { bg: 'bg-[#E0E7FF]', text: 'text-[#3730A3]', stripe: '#6366F1' },
+      { bg: 'bg-[#CCFBF1]', text: 'text-[#115E59]', stripe: '#14B8A6' }
+    ];
+
+    function getCategoryStyle(name) {
+      if (!name) return { bg: 'bg-slate-100', text: 'text-slate-700', stripe: '#94A3B8' };
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      const idx = Math.abs(hash) % PALETTE.length;
+      return PALETTE[idx];
+    }
+
+    const SIZE_PRESETS = ['Standard', 'S, M, L, XL', 'Single', 'Double', 'Queen', 'King', 'Custom'];
+    const VENDOR_PRESETS = ['box + cask', 'DIME Design', 'Herman Miller', 'West Elm', 'General'];
+
+    // State
+    let categories = ['Bookshelves', 'Chairs'];
+    let products = [];
+    let currencyMode = 'both'; // 'both' | 'ngn' | 'usd'
+    let activeGalleryProductId = null;
+
+    function renderCategoryOptions(selectedType) {
+      let out = '';
+      categories.forEach(c => {
+        const isSel = (c === selectedType) ? ' selected' : '';
+        out += '<option value="' + escapeHtml(c) + '"' + isSel + '>' + escapeHtml(c) + '</option>';
+      });
+      if (selectedType && !categories.includes(selectedType)) {
+        out += '<option value="' + escapeHtml(selectedType) + '" selected>' + escapeHtml(selectedType) + '</option>';
+      }
+      return out;
+    }
+
+    function renderSizesDatalist() {
+      let out = '';
+      SIZE_PRESETS.forEach(s => {
+        out += '<option value="' + escapeHtml(s) + '">';
+      });
+      return out;
+    }
+
+    function renderVendorDatalist() {
+      let out = '';
+      VENDOR_PRESETS.forEach(v => {
+        out += '<option value="' + escapeHtml(v) + '">';
+      });
+      return out;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSavedDraft();
+      if (products.length === 0) {
+        loadInitialSample();
+      } else {
+        render();
+      }
+    });
+
+    async function loadInitialSample() {
+      try {
+        const res = await fetch('/api/sample');
+        if (res.ok) {
+          products = await res.json();
+          ['Bookshelves', 'Chairs'].forEach(c => {
+            if (!categories.includes(c)) categories.push(c);
+          });
+          render();
+          return;
+        }
+      } catch (e) {}
+
+      // Fallback empty single row
+      addProductRow({
+        name: '',
+        type: categories[0] || 'General',
+        vendor: '',
+        in_stock: true,
+        unit_cost_usd: 0,
+        unit_cost_ngn: 0,
+        sizes: 'Standard',
+        size: ''
+      });
+    }
+
+    function generateId() {
+      return 'prod_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Currency Switcher
+    function setCurrencyMode(mode) {
+      currencyMode = mode;
+      const btnBoth = document.getElementById('currTabBoth');
+      const btnNGN = document.getElementById('currTabNGN');
+      const btnUSD = document.getElementById('currTabUSD');
+
+      const activeClass = 'bg-white text-slate-900 shadow-sm font-bold';
+      const inactiveClass = 'hover:text-slate-900 font-semibold';
+
+      [btnBoth, btnNGN, btnUSD].forEach(b => {
+        b.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + inactiveClass;
+      });
+
+      if (mode === 'both') btnBoth.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + activeClass;
+      else if (mode === 'ngn') btnNGN.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + activeClass;
+      else if (mode === 'usd') btnUSD.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all ' + activeClass;
+
+      render();
+      saveDraft();
+    }
+
+    // Category Modal
+    function openCategoryModal() {
+      renderCategoryChips();
+      document.getElementById('categoryModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('newCategoryInput').focus(), 100);
+    }
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
+      render();
+    }
+    function addCustomCategory() {
+      const input = document.getElementById('newCategoryInput');
+      const val = input.value.trim();
+      if (val && !categories.includes(val)) {
+        categories.push(val);
+        input.value = '';
+        renderCategoryChips();
+        saveDraft();
+      }
+    }
+    function removeCategory(cat) {
+      categories = categories.filter(c => c !== cat);
+      renderCategoryChips();
+      saveDraft();
+    }
+    function applyPreset(presetList) {
+      presetList.forEach(item => {
+        if (!categories.includes(item)) categories.push(item);
+      });
+      renderCategoryChips();
+      saveDraft();
+    }
+    function renderCategoryChips() {
+      const container = document.getElementById('categoryChipsContainer');
+      document.getElementById('categoryCountBadge').innerText = categories.length;
+      let html = '';
+      categories.forEach(cat => {
+        const style = getCategoryStyle(cat);
+        html += '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold ' + style.bg + ' ' + style.text + '">' +
+          '<span>' + escapeHtml(cat) + '</span>' +
+          '<button onclick="removeCategory(\'' + escapeHtml(cat) + '\')" class="hover:opacity-70 p-0.5"><i class="ph-bold ph-x text-[11px]"></i></button>' +
+          '</span>';
+      });
+      container.innerHTML = html;
+    }
+
+    // Render Table
+    function render() {
+      renderTableHeader();
+      renderTableBody();
+      updateStats();
+      saveDraft();
+    }
+
+    function renderTableHeader() {
+      const thead = document.getElementById('tableHeader');
+      let priceCols = '';
+
+      if (currencyMode === 'both') {
+        priceCols = 
+          '<th class="w-32 px-3 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">$</span> Unit cost ($)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-36 px-3 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">₦</span> Unit cost (₦)' +
+            '</div>' +
+          '</th>';
+      } else if (currencyMode === 'usd') {
+        priceCols = 
+          '<th class="w-36 px-4 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">$</span> Unit cost ($ USD)' +
+            '</div>' +
+          '</th>';
+      } else { // 'ngn'
+        priceCols = 
+          '<th class="w-36 px-4 py-3 border-r border-slate-200/80 text-right">' +
+            '<div class="flex items-center justify-end gap-1 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">₦</span> Unit cost (₦ NGN)' +
+            '</div>' +
+          '</th>';
+      }
+
+      thead.innerHTML = 
+        '<tr>' +
+          '<th class="w-10 px-3 py-3 text-center border-r border-slate-200/80">#</th>' +
+          '<th class="w-64 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">A</span> Name' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-40 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-tag text-slate-400"></i> Type (Category)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-52 px-4 py-3 border-r border-slate-200/80 text-center">' +
+            '<div class="flex items-center justify-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-images text-slate-400"></i> Images (Photos)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-40 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-buildings text-slate-400"></i> Vendor' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-24 px-3 py-3 border-r border-slate-200/80 text-center">' +
+            '<div class="flex items-center justify-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-check-square text-slate-400"></i> In stock' +
+            '</div>' +
+          '</th>' +
+          priceCols +
+          '<th class="w-40 px-4 py-3 border-r border-slate-200/80 text-center">' +
+            '<div class="flex items-center justify-center gap-1.5 text-slate-700">' +
+              '<i class="ph-bold ph-arrows-out-simple text-slate-400"></i> Sizes' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-52 px-4 py-3 border-r border-slate-200/80">' +
+            '<div class="flex items-center gap-1.5 text-slate-700">' +
+              '<span class="font-mono text-slate-400 font-bold">A</span> Size (WxLxH)' +
+            '</div>' +
+          '</th>' +
+          '<th class="w-16 px-2 py-3 text-center"></th>' +
+        '</tr>';
+    }
+
+    function renderTableBody() {
+      const tbody = document.getElementById('productTableBody');
+      const emptyState = document.getElementById('tableEmptyState');
+
+      if (products.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      let html = '';
+      products.forEach((p, idx) => {
+        const theme = getCategoryStyle(p.type);
+        const images = Array.isArray(p.images) ? p.images : (p.image_data ? [p.image_data] : []);
+        const primaryImg = images.length > 0 ? images[0] : null;
+
+        let imgHtml = '';
+        if (primaryImg) {
+          const badgeMore = images.length > 1 ? '<span class="absolute bottom-1 right-1 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">+' + (images.length - 1) + '</span>' : '';
+          imgHtml = '<div onclick="openGalleryModal(\'' + p.id + '\')" class="relative group/img inline-block rounded-xl overflow-hidden border border-slate-200 shadow-subtle bg-slate-50 w-24 h-16 cursor-pointer hover:border-purple-400 transition-all">' +
+            '<img src="' + primaryImg + '" class="w-full h-full object-cover">' +
+            badgeMore +
+            '<div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">' +
+            '<i class="ph-bold ph-pencil-simple mr-1"></i> Edit (' + images.length + ')' +
+            '</div></div>';
+        } else {
+          imgHtml = '<div onclick="openGalleryModal(\'' + p.id + '\')" class="w-24 h-14 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-purple-600 hover:border-purple-400 cursor-pointer transition-all">' +
+            '<i class="ph-bold ph-images text-lg"></i><span class="text-[10px] font-bold">+ Photos</span></div>';
+        }
+
+        // Price columns
+        let priceInputs = '';
+        const costUsd = (p.unit_cost_usd !== undefined && p.unit_cost_usd !== '') ? p.unit_cost_usd : (p.unit_cost || '');
+        const costNgn = (p.unit_cost_ngn !== undefined && p.unit_cost_ngn !== '') ? p.unit_cost_ngn : '';
+
+        if (currencyMode === 'both') {
+          priceInputs = 
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2 text-slate-400 font-mono text-xs">$</span>' +
+                '<input type="number" step="0.01" min="0" class="table-input pl-5 text-right font-mono font-bold text-slate-900" value="' + costUsd + '" placeholder="0.00" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_usd\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>' +
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2 text-slate-400 font-mono text-xs">₦</span>' +
+                '<input type="number" step="1" min="0" class="table-input pl-5 text-right font-mono font-bold text-slate-900" value="' + costNgn + '" placeholder="0" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_ngn\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>';
+        } else if (currencyMode === 'usd') {
+          priceInputs = 
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2.5 text-slate-400 font-mono text-xs">$</span>' +
+                '<input type="number" step="0.01" min="0" class="table-input pl-6 text-right font-mono font-bold text-slate-900" value="' + costUsd + '" placeholder="0.00" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_usd\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>';
+        } else { // 'ngn'
+          priceInputs = 
+            '<td class="px-3 py-2 border-r border-slate-200/70 text-right">' +
+              '<div class="relative flex items-center justify-end">' +
+                '<span class="absolute left-2.5 text-slate-400 font-mono text-xs">₦</span>' +
+                '<input type="number" step="1" min="0" class="table-input pl-6 text-right font-mono font-bold text-slate-900" value="' + costNgn + '" placeholder="0" onchange="updateProductField(\'' + p.id + '\', \'unit_cost_ngn\', this.value ? parseFloat(this.value) : 0)">' +
+              '</div>' +
+            '</td>';
+        }
+
+        html += '<tr class="hover:bg-slate-50/80 transition-colors group">' +
+          '<td class="relative px-3 py-3 text-center border-r border-slate-200/70 font-mono text-slate-400 text-xs select-none">' +
+          '<div class="absolute left-0 top-0 bottom-0 w-1" style="background-color: ' + theme.stripe + '"></div>' + (idx + 1) + '</td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70">' +
+          '<input type="text" class="table-input font-bold text-slate-900" value="' + escapeHtml(p.name || '') + '" placeholder="Product name..." onchange="updateProductField(\'' + p.id + '\', \'name\', this.value)">' +
+          '</td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70"><div class="relative">' +
+          '<select class="w-full text-xs font-bold px-2.5 py-1 rounded-md border border-transparent hover:border-slate-300 focus:outline-none cursor-pointer ' + theme.bg + ' ' + theme.text + '" onchange="updateProductField(\'' + p.id + '\', \'type\', this.value)">' +
+          renderCategoryOptions(p.type) +
+          '</select></div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70 text-center"><div class="flex items-center justify-center">' + imgHtml + '</div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70">' +
+          '<input type="text" list="vendorDatalist" class="table-input text-xs font-bold bg-[#EEF2F6] text-[#334155]" value="' + escapeHtml(p.vendor || '') + '" placeholder="Vendor / Brand..." onchange="updateProductField(\'' + p.id + '\', \'vendor\', this.value)">' +
+          '<datalist id="vendorDatalist">' + renderVendorDatalist() + '</datalist>' +
+          '</td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70 text-center">' +
+          '<button onclick="toggleProductStock(\'' + p.id + '\')" class="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base spring-bounce ' + (p.in_stock ? 'bg-amber-50 text-amber-500 border border-amber-200/60' : 'text-slate-300 bg-slate-50 border border-slate-200/50') + '" title="' + (p.in_stock ? 'In Stock (Click to toggle)' : 'Out of Stock') + '">' + (p.in_stock ? '👍' : '—') + '</button></td>' +
+          priceInputs +
+          '<td class="px-3 py-2 border-r border-slate-200/70 text-center"><div class="relative">' +
+          '<input type="text" list="sizesDatalist" class="table-input text-center font-medium text-slate-700 bg-slate-50/60" value="' + escapeHtml(p.sizes || '') + '" placeholder="e.g. S, M, L or Standard" onchange="updateProductField(\'' + p.id + '\', \'sizes\', this.value)">' +
+          '<datalist id="sizesDatalist">' + renderSizesDatalist() + '</datalist>' +
+          '</div></td>' +
+          '<td class="px-3 py-2 border-r border-slate-200/70">' +
+          '<input type="text" class="table-input text-slate-700 font-mono text-xs" value="' + escapeHtml(p.size || '') + '" placeholder="e.g. 12x7x8" onchange="updateProductField(\'' + p.id + '\', \'size\', this.value)"></td>' +
+          '<td class="px-2 py-2 text-center select-none"><div class="flex items-center justify-center gap-1">' +
+          '<button onclick="duplicateProduct(\'' + p.id + '\')" title="Duplicate product" class="p-1 text-slate-400 hover:text-slate-700 rounded"><i class="ph-bold ph-copy text-sm"></i></button>' +
+          '<button onclick="deleteProduct(\'' + p.id + '\')" title="Delete product" class="p-1 text-slate-400 hover:text-rose-600 rounded"><i class="ph-bold ph-trash text-sm"></i></button>' +
+          '</div></td></tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function addProductRow(data = {}) {
+      products.push({
+        id: generateId(),
+        name: data.name || '',
+        type: data.type || categories[0] || 'General',
+        vendor: data.vendor || 'box + cask',
+        in_stock: data.in_stock !== undefined ? data.in_stock : true,
+        unit_cost_usd: data.unit_cost_usd !== undefined ? data.unit_cost_usd : (data.unit_cost || 0.0),
+        unit_cost_ngn: data.unit_cost_ngn !== undefined ? data.unit_cost_ngn : 0.0,
+        unit_cost: data.unit_cost_usd !== undefined ? data.unit_cost_usd : (data.unit_cost || 0.0),
+        sizes: data.sizes || 'Standard',
+        size: data.size || '',
+        images: data.images || (data.image_data ? [data.image_data] : [])
+      });
+      render();
+    }
+
+    function updateProductField(id, field, value) {
+      const prod = products.find(p => p.id === id);
+      if (prod) {
+        prod[field] = value;
+        if (field === 'unit_cost_usd') prod.unit_cost = value;
+        renderTableBody();
+        saveDraft();
+      }
+    }
+
+    function toggleProductStock(id) {
+      const prod = products.find(p => p.id === id);
+      if (prod) {
+        prod.in_stock = !prod.in_stock;
+        renderTableBody();
+        updateStats();
+        saveDraft();
+      }
+    }
+
+    function duplicateProduct(id) {
+      const prod = products.find(p => p.id === id);
+      if (prod) {
+        const copy = JSON.parse(JSON.stringify(prod));
+        copy.id = generateId();
+        copy.name = copy.name + ' (Copy)';
+        const idx = products.findIndex(p => p.id === id);
+        products.splice(idx + 1, 0, copy);
+        render();
+      }
+    }
+
+    function deleteProduct(id) {
+      products = products.filter(p => p.id !== id);
+      render();
+    }
+
+    // Multi-Photo Gallery per Product
+    function openGalleryModal(id) {
+      activeGalleryProductId = id;
+      const prod = products.find(p => p.id === id);
+      if (!prod) return;
+      document.getElementById('galleryModalTitle').innerText = (prod.name || 'Product') + ' Photos';
+      renderGalleryGrid();
+      document.getElementById('galleryModal').classList.remove('hidden');
+    }
+
+    function closeGalleryModal() {
+      document.getElementById('galleryModal').classList.add('hidden');
+      activeGalleryProductId = null;
+      render();
+    }
+
+    function renderGalleryGrid() {
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (!prod) return;
+      const images = Array.isArray(prod.images) ? prod.images : [];
+      document.getElementById('galleryPhotoCount').innerText = images.length + ' photos';
+      let html = '';
+      images.forEach((img, idx) => {
+        const badgeMain = (idx === 0) ? '<span class="absolute top-2 left-2 bg-purple-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-sm">★ Main Featured</span>' :
+          '<button onclick="setMainGalleryPhoto(' + idx + ')" class="absolute top-2 left-2 bg-white/90 hover:bg-white text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">Set as Main</button>';
+
+        html += '<div class="relative group/thumb rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-36 flex items-center justify-center shadow-subtle">' +
+          '<img src="' + img + '" class="w-full h-full object-cover">' +
+          badgeMain +
+          '<button onclick="removeGalleryPhoto(' + idx + ')" class="absolute top-2 right-2 bg-rose-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm hover:bg-rose-700 transition-colors">' +
+          '<i class="ph-bold ph-trash text-xs"></i></button></div>';
+      });
+      document.getElementById('galleryGrid').innerHTML = html;
+    }
+
+    function setMainGalleryPhoto(idx) {
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (prod && prod.images[idx]) {
+        const item = prod.images.splice(idx, 1)[0];
+        prod.images.unshift(item);
+        prod.image_data = prod.images[0];
+        renderGalleryGrid();
+        saveDraft();
+      }
+    }
+
+    function removeGalleryPhoto(idx) {
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (prod) {
+        prod.images.splice(idx, 1);
+        prod.image_data = prod.images[0] || '';
+        renderGalleryGrid();
+        saveDraft();
+      }
+    }
+
+    function handleGalleryFilesSelected(e) {
+      const files = Array.from(e.target.files);
+      const prod = products.find(p => p.id === activeGalleryProductId);
+      if (!prod) return;
+      files.forEach(file => {
+        processImageFile(file, (b64) => {
+          if (!prod.images) prod.images = [];
+          prod.images.push(b64);
+          if (!prod.image_data) prod.image_data = b64;
+          renderGalleryGrid();
+          saveDraft();
+        });
+      });
+    }
+
+    function processImageFile(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1200;
+          let width = img.width, height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim; }
+            else { width = Math.round((width * maxDim) / height); height = maxDim; }
+          }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.88));
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Stats bar update (NO TOTAL SUM)
+    function updateStats() {
+      const count = products.length;
+      const inStockCount = products.filter(p => p.in_stock).length;
+      const totalPhotos = products.reduce((acc, p) => acc + (Array.isArray(p.images) ? p.images.length : (p.image_data ? 1 : 0)), 0);
+
+      document.getElementById('recordCountBadge').innerText = count + ' records';
+      document.getElementById('inStockSummary').innerText = inStockCount + ' in stock';
+      document.getElementById('photosSummary').innerText = totalPhotos + ' photos';
+      document.getElementById('categoryCountBadge').innerText = categories.length;
+    }
+
+    function saveDraft() {
+      try {
+        localStorage.setItem('client_portal_products', JSON.stringify(products));
+        localStorage.setItem('client_portal_categories', JSON.stringify(categories));
+        localStorage.setItem('client_portal_client', document.getElementById('clientName').value);
+        localStorage.setItem('client_portal_currency', currencyMode);
+      } catch (e) {}
+    }
+
+    function loadSavedDraft() {
+      try {
+        const p = localStorage.getItem('client_portal_products');
+        if (p) products = JSON.parse(p);
+        const c = localStorage.getItem('client_portal_categories');
+        if (c) categories = JSON.parse(c);
+        const cl = localStorage.getItem('client_portal_client');
+        if (cl) document.getElementById('clientName').value = cl;
+        const cur = localStorage.getItem('client_portal_currency');
+        if (cur) setCurrencyMode(cur);
+      } catch (e) {}
+    }
+
+    // Download Package (.zip) with WooCommerce CSV & Sorted Folders
+    async function exportAndDownloadZip() {
+      // First try to save to backend if server is accessible
+      try {
+        const payload = {
+          client_name: document.getElementById('clientName').value || 'Client',
+          catalog_title: 'Catalog',
+          products: products
+        };
+        const res = await fetch('/api/save-catalog', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.zip_path) {
+            window.location.href = '/api/download-zip?path=' + encodeURIComponent(data.zip_path);
+            return;
+          }
+        }
+      } catch (err) {
+        console.log('Using client-side ZIP generator');
+      }
+
+      // Standalone browser ZIP generator fallback
+      const zip = new JSZip();
+      const client = document.getElementById('clientName').value || 'Client';
+      const rootFolder = zip.folder(client + '_Product_Catalog');
+      const categoryFolder = rootFolder.folder("Products_By_Category");
+      const vendorFolder = rootFolder.folder("Products_By_Vendor");
+
+      // WooCommerce Standard Import CSV (NO total sum, Dual Currency columns)
+      let csvContent = "Type,SKU,Name,Published,Is featured?,Visibility in catalog,Short description,Description,In stock?,Regular price,Regular price (USD),Regular price (NGN),Categories,Tags,Images,Attribute 1 name,Attribute 1 value(s),Attribute 1 visible,Attribute 1 global\n";
+
+      products.forEach((p, idx) => {
+        const cleanName = (p.name || ('Product_' + (idx+1))).replace(/[\\/*?:"<>|]/g, '_');
+        const cleanVendor = (p.vendor || 'General').replace(/[\\/*?:"<>|]/g, '_');
+        const cleanType = (p.type || 'Uncategorized').replace(/[\\/*?:"<>|]/g, '_');
+        const costUsd = p.unit_cost_usd !== undefined ? p.unit_cost_usd : (p.unit_cost || 0);
+        const costNgn = p.unit_cost_ngn || 0;
+        const mainCost = costUsd || costNgn || 0;
+        const inStock = p.in_stock ? 1 : 0;
+        const sizes = p.sizes || '';
+        const dims = p.size || '';
+        const attrVal = [sizes, dims ? ('Dimensions: ' + dims) : ''].filter(Boolean).join(', ');
+
+        const images = Array.isArray(p.images) ? p.images : (p.image_data ? [p.image_data] : []);
+        const imgNames = [];
+
+        images.forEach((imgB64, imgIdx) => {
+          if (imgB64 && imgB64.includes('base64,')) {
+            const b64Data = imgB64.split('base64,')[1];
+            const filename = (imgIdx === 0) ? ('01_featured_' + cleanName + '.jpg') : ((imgIdx+1) + '_gallery_' + cleanName + '.jpg');
+            imgNames.push(filename);
+            categoryFolder.file(cleanType + '/' + cleanName + ' (' + cleanVendor + ')/' + filename, b64Data, { base64: true });
+            vendorFolder.file(cleanVendor + '/' + cleanType + '/' + cleanName + '/' + filename, b64Data, { base64: true });
+          }
+        });
+
+        csvContent += '"simple","WC-' + String(idx+1).padStart(4, '0') + '","' + cleanName + '",1,0,"visible","' + cleanType + '","' + (dims ? ('Size: ' + dims) : '') + '",' + inStock + ',' + mainCost + ',' + costUsd + ',' + costNgn + ',"' + cleanType + '","' + cleanVendor + '","' + imgNames.join(', ') + '","Size","' + attrVal + '",1,1\n';
+      });
+
+      rootFolder.file("woocommerce_import.csv", csvContent);
+      rootFolder.file("catalog_manifest.json", JSON.stringify(products, null, 2));
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      saveAs(blob, client + '_Product_Catalog.zip');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
